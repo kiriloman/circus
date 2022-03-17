@@ -36,12 +36,14 @@ func simulate(simulations int) float32 {
 		}()
 	}
 
+	go func() {
+		for num := range unoccupiedPositions {
+			totalUnoccupied += num
+		}
+	}()
+
 	wg.Wait()
 	close(unoccupiedPositions)
-
-	for num := range unoccupiedPositions {
-		totalUnoccupied += num
-	}
 
 	return float32(totalUnoccupied) / float32(simulations)
 }
@@ -66,15 +68,16 @@ func run(simulateWG *sync.WaitGroup, unoccupiedPositions chan<- int) {
 		}
 	}
 
-	wg.Wait()
-
-	close(positions)
-
 	// Use a map as a set to store the occupied positions.
 	occupiedPositions := map[circus.Position]struct{}{}
-	for finalPosition := range positions {
-		occupiedPositions[finalPosition] = struct{}{}
-	}
+	go func() {
+		for finalPosition := range positions {
+			occupiedPositions[finalPosition] = struct{}{}
+		}
+	}()
+
+	wg.Wait()
+	close(positions)
 
 	// The number of unoccupied positions is the total number of positions
 	// minus the number of occupied ones.
